@@ -1,0 +1,373 @@
+library IEEE;
+
+use IEEE.STD_LOGIC_1164.ALL; use IEEE.STD_LOGIC_ARITH.ALL;
+
+use IEEE.STD_LOGIC_UNSIGNED.ALL;
+
+---- Uncomment the following library declaration if instantiating
+---- any Xilinx primitives in this code.
+--library UNISIM;
+--use UNISIM.VComponents.all;
+
+
+
+
+entity test11 is
+
+port(
+
+B, const1, F, Wb, Wc : in std_logic_vector (3 downto 0); clock, reset: in std_logic;
+
+Tp: in	std_logic_vector (7 downto 0);
+
+z,r: out std_logic_vector (3 downto 0); --z: out std_logic;
+
+ Y: out std_logic_vector (7 downto 0) );
+
+end test11;
+
+
+
+
+architecture Behavioral of test11 is
+
+
+component D_latch5 is
+
+port( Data_in5 : in std_logic_vector(3 downto 0); latch_strobe_R3: in std_logic;
+
+Data_out5: out std_logic_vector(3 downto 0)
+
+              ); end component;
+
+component mux4_2_to_1 is port (
+
+const1: in std_logic_vector(3 downto 0); Wb: in std_logic_vector(3 downto 0); selector_R3: in std_logic;
+
+ O4: out std_logic_vector (3 downto 0) );
+
+end component;
+
+
+component mux3_2_to_1 is port (
+
+Tp: in std_logic_vector(7 downto 0);
+
+R2out: in std_logic_vector(7 downto 0); selector_R3: in std_logic;
+
+O3: out std_logic_vector (7 downto 0)
+);
+end component;
+
+
+component D_latch4 is
+
+port( Data_in4 : in std_logic_vector(7 downto 0); latch_strobe_R3: in std_logic;
+
+ Data_out4: out std_logic_vector(7 downto 0) );
+
+end component;
+
+
+
+component divcas4 is -- 8 bit dividend, 4 bit divisor port (
+
+enable_R3 : in	std_logic;
+
+dividend : in std_logic_vector(7 downto 0); divisor : in std_logic_vector(3 downto 0); quotient : out std_logic_vector(3 downto 0); remainder : out std_logic_vector(3 downto 0)
+
+         ); end component;
+
+
+component D_latch6 is
+
+port( Data_in6 : in std_logic_vector(3 downto 0); output_strobe_R3: in std_logic;
+
+ Data_out6: out std_logic_vector(3 downto 0) );
+
+end component;
+
+
+
+component demux2_2_to_1 is port (
+
+Data_out6: in std_logic_vector(3 downto 0);
+
+R1in, RegM: out std_logic_vector(3 downto 0); Deselector_R3: in std_logic
+
+             ); end component;
+             
+
+component D_latch8 is
+
+port( Data_in8 : in std_logic_vector(3 downto 0); latch_strobe_R1: in std_logic;
+
+ Data_out8: out std_logic_vector(3 downto 0) );
+
+end component;
+
+
+component D_latch7 is
+
+port( Data_in7 : in std_logic_vector(3 downto 0); latch_strobe_R1: in std_logic;
+
+ Data_out7: out std_logic_vector(3 downto 0) );
+
+end component;
+
+
+
+component Adder is port
+
+(Data_out7: in std_logic_vector(3 downto 0); enable_R1: in std_logic;
+
+Data_out8: in std_logic_vector(3 downto 0); Data_in9 : out std_logic_vector(3 downto 0) );
+
+end component;
+
+
+
+component D_latch9 is port(
+
+Data_in9 : in std_logic_vector( 3 downto 0); output_strobe_R1: in std_logic;
+
+ R2input: out std_logic_vector(3 downto 0) );
+
+end component;
+
+
+
+component mux_2_to_1 is port (
+
+Wc: in std_logic_vector(3 downto 0);
+
+R1out: in std_logic_vector(3 downto 0); selector_R2: in std_logic;
+
+O: out std_logic_vector (3 downto 0)
+);
+end component;
+
+
+component D_latch is
+
+port( Data_in : in std_logic_vector(3 downto 0); latch_strobe_R2: in std_logic;
+
+ Data_out: out std_logic_vector(3 downto 0) );
+
+End component;
+
+
+component multiplier is
+port( enable_R2: in std_logic;
+
+Data_out: in std_logic_vector(3 downto 0); Data_out2: in std_logic_vector(3 downto 0); Data_in3 : out std_logic_vector(7 downto 0) );
+
+end component;
+
+
+component D_latch2 is
+
+port( Data_in2 : in std_logic_vector(3 downto 0); latch_strobe_R2: in std_logic;
+
+ Data_out2: out std_logic_vector(3 downto 0) );
+
+end component;
+
+
+component D_latch3 is
+
+port( Data_in3 : in std_logic_vector(7 downto 0); output_strobe_R2: in std_logic;
+
+ Data_out3: out std_logic_vector(7 downto 0) );
+
+end component;
+
+
+
+component Demux1_2_to_1 is port (
+
+Data_out3: in std_logic_vector(7 downto 0);
+
+R3in, RegY: out std_logic_vector(7 downto 0); Deselector_R2: in std_logic
+
+             ); end component;
+
+
+
+component registerY is port
+
+
+( regY: in std_logic_vector(7 downto 0); Dstrobe: in std_logic;
+
+Y : out std_logic_vector(7 downto 0)
+);
+end component;
+
+
+
+component registerF is port
+
+( F: in std_logic_vector(3 downto 0); strobe: in std_logic;
+
+regF : out std_logic_vector(3 downto 0)
+);
+end component;
+
+
+
+component registerB is port
+
+( B: in std_logic_vector(3 downto 0); strobe: in std_logic;
+
+regB : out std_logic_vector(3 downto 0)
+);
+end component;
+
+
+
+component registerM is port
+
+( regm: in std_logic_vector(3 downto 0); Dstrobe: in std_logic;
+
+Data_in7 : out std_logic_vector(3 downto 0)
+);
+end component;
+
+
+
+component register1 is port
+
+( const1: in std_logic_vector(3 downto 0); strobe: in std_logic;
+
+reg1: out std_logic_vector(3 downto 0)
+);
+end component;
+
+
+
+component registerWb is port
+
+( wb: in std_logic_vector(3 downto 0);
+
+strobe: in std_logic;
+regwb : out std_logic_vector(3 downto 0)
+);
+end component;
+
+
+
+component registerWc is port
+
+( wc: in std_logic_vector(3 downto 0); strobe: in std_logic;
+
+Data_in1 : out std_logic_vector(3 downto 0)
+);
+end component;
+
+
+
+
+component mux2_2_to_1 is port (
+
+F: in std_logic_vector(3 downto 0);
+
+B: in std_logic_vector(3 downto 0); selector_R2: in std_logic;
+
+O2: out std_logic_vector (3 downto 0)
+);
+end component;
+
+
+
+component registerTp is port
+
+( tp: in std_logic_vector(7 downto 0); strobe: in std_logic;
+
+regtp : out std_logic_vector(7 downto 0)
+);
+end component;
+
+
+component control_unit is
+
+port(
+
+clock, reset: in std_logic; latch_strobe_R2,output_strobe_R2,enable_R2,selector_R2,Deselector_R2: out
+
+std_logic;
+
+selector_R3,latch_strobe_R3,enable_R3,output_strobe_R3,Deselector_R3: out std_logic;
+
+--count1 :out INTEGER; latch_strobe_R1,enable_R1,output_strobe_R1,clk,strobe_regM, strobe_regY:
+
+out std_logic
+
+);
+
+end component;
+
+
+
+
+signal sig1, sig2, sig3, sig4, sig7, sig8, sig10 :std_logic_vector(3 downto 0); signal sig44, sig45, sig81 : std_logic_vector(3 downto 0);
+
+signal sig39, sig40, sig43, sig46 : std_logic_vector (7 downto 0); signal sig47, sig51, sig54, sig13, sig86: std_logic_vector (7 downto 0); signal sig5, sig6, sig9, sig52, sig53 :std_logic;
+
+signal sig55, sig80, sig48 : std_logic;
+
+signal sig11, sig12,sig16, sig17, sig19, sig20: std_logic_vector(3 downto 0); signal sig21, sig22, sig25,sig61: std_logic_vector ( 3 downto 0);
+
+signal sig14, sig15, sig18, sig23 : std_logic; signal sig24, sig30, sig31, sig32: std_logic; signal sig36, sig37, sig50, sig59: std_logic; signal sig60,sig64, sig66: std_logic;
+
+signal sig62, sig68, sig70,sig71,sig74: std_logic;
+
+ signal sig26, sig27, sig28, sig29: std_logic_vector (3 downto 0); signal sig33, sig34, sig35, sig56: std_logic_vector (3 downto 0); signal sig57, sig38, sig58, sig63: std_logic_vector (3 downto 0); signal sig65, sig67, sig69,sig72,sig73: std_logic_vector ( 3 downto 0); signal sigc, sigr: std_logic;
+
+
+begin
+
+sigc<=clock;
+sigr<=reset;
+sig69<=B;
+sig67<=F;
+sig57<=Wc;
+sig7<=Wb;
+
+sig72<=const1;
+sig86<=tp;
+
+
+
+stage_0 : mux3_2_to_1 port map (sig39, sig54, sig9, sig43); 
+stage_1 : D_latch5 port map (sig10, sig6, sig2);
+stage_2 : mux4_2_to_1 port map (sig8, sig7, sig9,sig10); 
+stage_3 : D_latch4 port map(sig43, sig6, sig13);
+stage_4 : divcas4 port map (sig80, sig13, sig2, sig16, sig17); 
+stage_5 : D_latch6 port map(sig16, sig18, sig19);
+stage_6 : demux2_2_to_1 port map (sig19, sig20, sig21, sig23); 
+stage_7 : D_latch8 port map (sig20, sig24, sig25);
+stage_8 : D_latch7 port map (sig26, sig24, sig27); 
+stage_9 : Adder port map (sig27, sig31, sig25, sig29); 
+stage_10: D_latch9 port map (sig29, sig32, sig33);
+stage_11: mux_2_to_1 port map (sig81, sig33,sig36,sig34); 
+stage_12: D_latch port map ( sig34, sig37, sig38); 
+stage_13: multiplier port map (sig66, sig38, sig65, sig46); 
+stage_14: D_latch3 port map (sig46, sig53, sig47);
+stage_15: Demux1_2_to_1 port map (sig47, sig54, sig40, sig48); 
+stage_16: registerY port map (sig40, sig55, sig51);
+stage_17: registerWb port map (sig7, sig59, sig56); 
+stage_18: registerWc port map (sig57, sig59, sig81); 
+stage_19: mux2_2_to_1 port map (sig58,sig61,sig36,sig63); 
+stage_20: D_latch2 port map (sig63, sig37, sig65); 
+stage_21: registerF port map (sig67, sig59, sig58); 
+stage_22: registerB port map (sig69, sig59, sig61); 
+stage_23: registerM port map (sig21, sig74, sig26); 
+stage_24: register1 port map (sig72,sig59,sig8);
+stage_25: registerTp port map (sig86,sig59,sig39);
+stage_26:control_unit port map (sigc, sigr, sig37, sig53, sig66, sig36, sig48, sig9, sig6, sig80, sig18, sig23, sig24, sig31, sig32, sig59, sig74, sig55);
+
+Y<=sig51;
+z<=sig16;
+r<=sig29;
+end Behavioral;
+

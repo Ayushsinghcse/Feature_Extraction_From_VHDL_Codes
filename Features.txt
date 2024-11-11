@@ -1,0 +1,10 @@
+a. Comparator--Real value--from code as component
+b. Multiplexers(2*1 Mux)--real value --from code as component 
+c. Not Gates-- port map in code or from code as component 
+d. Inverter Chain--real value--from port map *
+e. Counter--from code as component
+f. Extra register--if register connected to comparator/counter-port map info *
+g. Tri-state buffer--optional real value -- from code as component
+h. Mux output acting as input for another Mux--from port map *
+i. Presence of third input signal in FUs-- go into component code and check input--not conclusive
+--check also from controller VHDL code--if non-existent signals in controller datapath, then Trojan
