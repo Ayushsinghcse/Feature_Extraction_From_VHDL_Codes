@@ -22,24 +22,53 @@ def muxCount(type):
         
     return muxCnt
 
-def notGateCount():
-    ntGtCnt = 0
-    pattern = r"component not(?:[1-9]|1[0-9]|2[0-5])\b"
-    not_chain_pattern = r"not\((?:not\()+"
-    chainPresent = False
-    presence = False
+def deMuxCount(type):
+    deMuxCnt = 0
+    pattern = rf"component ([d|D]emux)(?:[0-9]|1[0-9]|20)?_1_to_{type}"
     for line in content:
         if re.search(pattern, line):
-            ntGtCnt+=1
-        if "begin" in line:
-            presence=True
-        if presence and 'end' in line:
-            presence=False 
-        if presence:
-            if re.search(not_chain_pattern, line):
-                chainPresent=True 
+            print(line)
+            deMuxCnt+=1
+        
+    return deMuxCnt
 
-    return ntGtCnt, chainPresent
+def notGateCount():
+    pattern = r"component ([N|n]ot)(?:[1-9]|1[0-9]|2[0-5])\b"
+    checkNot, checkReg = False
+    compDefnList = {}
+    itr = 0
+    container = {'input':[], 'output':[]}
+    defn = ""
+    for line in content:
+        if re.search(pattern, line) and not checkNot:
+            checkNot=True
+            res = line.split(" ")
+            defn += res[1]
+        if checkNot and re.search(r'end component', line):
+            itr = 0
+            compDefnList[defn]=container
+            container={'input':[], 'output':[]}
+            defn = ""
+            checkNot=False
+        if checkNot:
+            res = re.split(r'[;:,]', line)
+            for i in range(res):
+                if res[i]=='in':
+                    container['input'].append(itr)
+                    itr+=1
+                if res[i]=='out':
+                    container['output'].append(itr)
+                    itr+=1
+    notIp,notOp = [],[]
+    for key,value in compDefnList:
+        notIp.extend(i for i in value['input'])
+        notOp.extend(i for i in value['output'])
+    notChain = False
+    for i in notIp:
+        if i in notOp:
+            notChain=True 
+    print('not chain present' if notChain else '')
+    return len(compDefnList),notChain
 
 def counterCount():
     counterCnt = 0
@@ -72,15 +101,16 @@ def triStateBuffer():
 # compCount, presence = comparaterCount()
 def extraRegister(presence):
     # presence=True
+    regOutput = []
+    regDefnList = {}
     if presence:
         pattern = r"component comparator(?:[1-9]|1[0-9]|2[0-5])\b"
         regPattern = r"component register[A-Z]{1,2}"
         checkComp, checkReg = False, False
         extraReg = 0
         compDefnList = {}
-        regDefnList = {}
         itr = 0
-        container = {}
+        container = {'input':[], 'output':[]}
         defn = ""
         check=False
         for line in content:
@@ -91,17 +121,17 @@ def extraRegister(presence):
             if checkComp and re.search(r'end component', line):
                 itr = 0
                 compDefnList[defn]=container
-                container={}
+                container={'input':[], 'output':[]}
                 defn = ""
                 checkComp=False
             if checkComp:
                 res = re.split(r'[;:,]', line)
                 for i in range(res):
                     if res[i]=='in':
-                        container[itr]='input'
+                        container['input'].append(itr)
                         itr+=1
                     if res[i]=='out':
-                        container[itr]='ouput'
+                        container['output'].append(itr)
                         itr+=1
             if re.search(regPattern, line) and not checkReg:
                 checkReg=True 
@@ -110,7 +140,7 @@ def extraRegister(presence):
             if checkReg and re.search(r'end component', line):
                 itr = 0
                 regDefnList[defn]=container
-                container={}
+                container={'input':[], 'output':[]}
                 defn = ""
                 checkReg=False
             if checkReg:
@@ -124,9 +154,9 @@ def extraRegister(presence):
                         container['input'].append(itr)
                         itr+=1
                     if res[i]=='out':
-                        container['output']=itr
+                        container['output'].append(itr)
                         itr+=1
-        regOutput = []
+
 
         for line in content:
             if 'begin' in line:
@@ -140,7 +170,7 @@ def extraRegister(presence):
                 match = re.search(r"\((.*?)\)", line)
                 inside_brackets = match.group(1)
                 elements = [elem.strip() for elem in inside_brackets.split(",")]
-                regOutput.append(elements[regDefnList[defn]['output']])
+                regOutput.extend([elements[i] for i in regDefnList[defn]['output']])
         print(regOutput)
         check = False
         for line in content:
@@ -160,11 +190,11 @@ def extraRegister(presence):
                         extraReg+=1
         if extraReg:
             print('extra register present!')
-        return extraReg
-    return 0
+        return extraReg, regOutput, len(regDefnList)
+    return 0,regOutput, len(regDefnList)
 
 def muxToMux():
-    pattern = r"component (?<!de)mux(?:[0-9]|1[0-9]|20)?_(?:2|4|8|16|32)_to_(?:1|2|4|8|16)"
+    pattern = r"component (?<!de)mux(?:[0-9]|1[0-9]|20)?_(?:2|4|8|16|32)_to_(?:1)"
     checkMux = False
     regDefnList={}
     container={'output':[],'input':[]}
@@ -235,7 +265,8 @@ def muxToMux():
                         mTmCnt+=1
     if mTmCnt>0:
         print("mux to mux entry present!")
-    return mTmCnt
+    return mTmCnt, muxInput
+
 
 
 def functionalUnit():
@@ -282,14 +313,51 @@ def functionalUnit():
     print('Trojan Present' if trojan else None)
     return trojan
 
+def regToMux(regOp, muxIp):
+    extraReg = 0
+    for i in regOp:
+        if i in muxIp:
+            extraReg+=1
+    print("extra Register Present")
+
+def latch():
+    latchCnt = 0
+    pattern = r"component ([l|L]atch)(?:[1-9]|1[0-9]|2[0-5])\b"
+    for line in content:
+        if re.search(pattern, line):
+            latchCnt+=1
+    return latchCnt
+
+def FU(s):
+    Cnt = 0
+    pattern = fr"component ([{s[0]}[|{s[0].upper()}]{s[1:]})(?:[1-9]|1[0-9]|2[0-5])\b"
+    for line in content:
+        if re.search(pattern, line):
+            Cnt+=1
+    return Cnt
 
 
 if __name__ == "__main__":
-    print(muxCount(2))
-    print(notGateCount())
-    print(counterCount())
-    print(triStateBuffer())
+    mux2 = muxCount(2)
+    mux4 = muxCount(4)
+    mux8 = muxCount(8)
+    mux16 = muxCount(16)
+    mux32 = muxCount(32)
+
+    demux2=deMuxCount(2)
+    demux4=deMuxCount(4)
+    demux8=deMuxCount(8)
+    demux16=deMuxCount(16)
+    demux32=deMuxCount(32)
+    notCnt, notChain = notGateCount()
+    counterCnt = counterCount()
+    TSBCnt = triStateBuffer()
     compCount, presence = comparaterCount()
-    print(extraRegister(presence))
-    print(muxToMux())
-    print(functionalUnit())
+    extra, regOp, regCnt = extraRegister(presence)
+    mtmPresent, muxIp = muxToMux()
+    print(regToMux(regOp, muxIp))
+    latchCnt = latch()
+    # functionalUnit())
+    Adder = FU('adder')
+    Subtractor = FU('subtractor')
+    multiplier = FU('multiplier')
