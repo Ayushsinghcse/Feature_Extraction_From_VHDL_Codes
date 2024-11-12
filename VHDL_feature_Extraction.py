@@ -1,4 +1,5 @@
 import re
+import pandas as pd
 with open ("Datapath VHDL_with portmap.txt", 'r') as file:
     content = file.readlines()
 
@@ -15,6 +16,7 @@ r"mux(?:[1-9]|1[0-9]|20)_(?:2|4|8|16|32)_to_(?:1|2|4|8|16)"
 def muxCount(type):
     muxCnt = 0
     pattern = rf"component mux(?:[0-9]|1[0-9]|20)?_{type}_to_1"
+    print(pattern)
     for line in content:
         if re.search(pattern, line):
             print(line)
@@ -24,7 +26,7 @@ def muxCount(type):
 
 def deMuxCount(type):
     deMuxCnt = 0
-    pattern = rf"component ([d|D]emux)(?:[0-9]|1[0-9]|20)?_1_to_{type}"
+    pattern = rf"component ([d|D]emux)(?:[0-9]|1[0-9]|20)?_{type}_to_1"
     for line in content:
         if re.search(pattern, line):
             print(line)
@@ -34,7 +36,7 @@ def deMuxCount(type):
 
 def notGateCount():
     pattern = r"component ([N|n]ot)(?:[1-9]|1[0-9]|2[0-5])\b"
-    checkNot, checkReg = False
+    checkNot = False
     compDefnList = {}
     itr = 0
     container = {'input':[], 'output':[]}
@@ -103,61 +105,60 @@ def extraRegister(presence):
     # presence=True
     regOutput = []
     regDefnList = {}
+    pattern = r"component comparator(?:[1-9]|1[0-9]|2[0-5])\b"
+    regPattern = r"component register[A-Z]{1,2}"
+    checkComp, checkReg = False, False
+    extraReg = 0
+    compDefnList = {}
+    itr = 0
+    container = {'input':[], 'output':[]}
+    defn = ""
+    check=False
+    for line in content:
+        if re.search(pattern, line) and not checkComp:
+            checkComp=True
+            res = line.split(" ")
+            defn += res[1]
+        if checkComp and re.search(r'end component', line):
+            itr = 0
+            compDefnList[defn]=container
+            container={'input':[], 'output':[]}
+            defn = ""
+            checkComp=False
+        if checkComp:
+            res = re.split(r'[;:,]', line)
+            for i in range(res):
+                if res[i]=='in':
+                    container['input'].append(itr)
+                    itr+=1
+                if res[i]=='out':
+                    container['output'].append(itr)
+                    itr+=1
+        if re.search(regPattern, line) and not checkReg:
+            checkReg=True 
+            res=line.split()
+            defn+=res[1]
+        if checkReg and re.search(r'end component', line):
+            itr = 0
+            regDefnList[defn]=container
+            container={'input':[], 'output':[]}
+            defn = ""
+            checkReg=False
+        if checkReg:
+            res = re.split(r'[;:, ]', line)
+            if '' in res:
+                res.remove('')
+            for i in range(len(res)):
+                if res[i]=='in':
+                    if 'input' not in container:
+                        container['input']=[]
+                    container['input'].append(itr)
+                    itr+=1
+                if res[i]=='out':
+                    container['output'].append(itr)
+                    itr+=1
+
     if presence:
-        pattern = r"component comparator(?:[1-9]|1[0-9]|2[0-5])\b"
-        regPattern = r"component register[A-Z]{1,2}"
-        checkComp, checkReg = False, False
-        extraReg = 0
-        compDefnList = {}
-        itr = 0
-        container = {'input':[], 'output':[]}
-        defn = ""
-        check=False
-        for line in content:
-            if re.search(pattern, line) and not checkComp:
-                checkComp=True
-                res = line.split(" ")
-                defn += res[1]
-            if checkComp and re.search(r'end component', line):
-                itr = 0
-                compDefnList[defn]=container
-                container={'input':[], 'output':[]}
-                defn = ""
-                checkComp=False
-            if checkComp:
-                res = re.split(r'[;:,]', line)
-                for i in range(res):
-                    if res[i]=='in':
-                        container['input'].append(itr)
-                        itr+=1
-                    if res[i]=='out':
-                        container['output'].append(itr)
-                        itr+=1
-            if re.search(regPattern, line) and not checkReg:
-                checkReg=True 
-                res=line.split()
-                defn+=res[1]
-            if checkReg and re.search(r'end component', line):
-                itr = 0
-                regDefnList[defn]=container
-                container={'input':[], 'output':[]}
-                defn = ""
-                checkReg=False
-            if checkReg:
-                res = re.split(r'[;:, ]', line)
-                if '' in res:
-                    res.remove('')
-                for i in range(len(res)):
-                    if res[i]=='in':
-                        if 'input' not in container:
-                            container['input']=[]
-                        container['input'].append(itr)
-                        itr+=1
-                    if res[i]=='out':
-                        container['output'].append(itr)
-                        itr+=1
-
-
         for line in content:
             if 'begin' in line:
                 check=True
@@ -319,18 +320,21 @@ def regToMux(regOp, muxIp):
         if i in muxIp:
             extraReg+=1
     print("extra Register Present")
+    return extraReg
 
 def latch():
     latchCnt = 0
-    pattern = r"component ([l|L]atch)(?:[1-9]|1[0-9]|2[0-5])\b"
+    pattern = r"component ([D|T]_[l|L]atch)(?:[1-9]|1[0-9]|2[0-5])"
     for line in content:
         if re.search(pattern, line):
+            print(line)
             latchCnt+=1
     return latchCnt
 
 def FU(s):
     Cnt = 0
-    pattern = fr"component ([{s[0]}[|{s[0].upper()}]{s[1:]})(?:[1-9]|1[0-9]|2[0-5])\b"
+    pattern = rf"component ([{s[0]}|{s[0].upper()}]{s[1:]})(?:[0-9]|1[0-9]|20)?"
+    print(pattern)
     for line in content:
         if re.search(pattern, line):
             Cnt+=1
@@ -338,26 +342,63 @@ def FU(s):
 
 
 if __name__ == "__main__":
-    mux2 = muxCount(2)
-    mux4 = muxCount(4)
-    mux8 = muxCount(8)
-    mux16 = muxCount(16)
-    mux32 = muxCount(32)
+    featureSet = {'features':[],'present':[],'count':[]}
+    i,itr = 2,1
+    while i<=32:
+        mxCnt = muxCount(i)
+        featureSet['features'].append(f'mux{i}_to_1')
+        featureSet['present'].append('Yes' if mxCnt>0 else 'No')
+        featureSet['count'].append(mxCnt)
+        itr+=1
+        i = pow(2,itr)
 
-    demux2=deMuxCount(2)
-    demux4=deMuxCount(4)
-    demux8=deMuxCount(8)
-    demux16=deMuxCount(16)
-    demux32=deMuxCount(32)
+    i,itr=2,1
+    while i<=32:
+        mxCnt = deMuxCount(i)
+        featureSet['features'].append(f'demux{i}_to_1')
+        featureSet['present'].append('Yes' if mxCnt>0 else 'No')
+        featureSet['count'].append(mxCnt)
+        itr+=1
+        i = pow(2,itr)
     notCnt, notChain = notGateCount()
+    featureSet['features'].append('not gate')
+    featureSet['present'].append('Yes' if notCnt>0 else 'No')
+    featureSet['count'].append(notCnt)
     counterCnt = counterCount()
+    featureSet['features'].append('counter')
+    featureSet['present'].append('Yes' if counterCnt>0 else 'No')
+    featureSet['count'].append(counterCnt)
     TSBCnt = triStateBuffer()
+    featureSet['features'].append('Tri State Buffer')
+    featureSet['present'].append('Yes' if TSBCnt>0 else 'No')
+    featureSet['count'].append(TSBCnt)
     compCount, presence = comparaterCount()
+    featureSet['features'].append('Comparator')
+    featureSet['present'].append('Yes' if compCount>0 else 'No')
+    featureSet['count'].append(compCount)
     extra, regOp, regCnt = extraRegister(presence)
+    featureSet['features'].append('registers')
+    featureSet['present'].append('Yes' if regCnt>0 else 'No')
+    featureSet['count'].append(regCnt)
     mtmPresent, muxIp = muxToMux()
-    print(regToMux(regOp, muxIp))
+    extraReg = regToMux(regOp, muxIp)
     latchCnt = latch()
+    featureSet['features'].append('latch')
+    featureSet['present'].append('Yes' if latchCnt>0 else 'No')
+    featureSet['count'].append(latchCnt)
     # functionalUnit())
     Adder = FU('adder')
+    featureSet['features'].append('Adder')
+    featureSet['present'].append('Yes' if Adder>0 else 'No')
+    featureSet['count'].append(Adder)
     Subtractor = FU('subtractor')
+    featureSet['features'].append('Subtractor')
+    featureSet['present'].append('Yes' if Subtractor>0 else 'No')
+    featureSet['count'].append(Subtractor)
     multiplier = FU('multiplier')
+    featureSet['features'].append('Multiplier')
+    featureSet['present'].append('Yes' if multiplier>0 else 'No')
+    featureSet['count'].append(multiplier)
+
+    df = pd.DataFrame(featureSet)
+    print(df)
