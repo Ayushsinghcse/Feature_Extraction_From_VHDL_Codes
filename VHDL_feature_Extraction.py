@@ -380,13 +380,17 @@ if __name__ == "__main__":
     featureSet['features'].append('registers')
     featureSet['present'].append('Yes' if regCnt>0 else 'No')
     featureSet['count'].append(regCnt)
+
     mtmPresent, muxIp = muxToMux()
     extraReg = regToMux(regOp, muxIp)
+
     latchCnt = latch()
     featureSet['features'].append('latch')
     featureSet['present'].append('Yes' if latchCnt>0 else 'No')
     featureSet['count'].append(latchCnt)
-    # functionalUnit())
+
+    fnUnit = functionalUnit()
+
     Adder = FU('adder')
     featureSet['features'].append('Adder')
     featureSet['present'].append('Yes' if Adder>0 else 'No')
@@ -402,3 +406,22 @@ if __name__ == "__main__":
 
     df = pd.DataFrame(featureSet)
     print(df)
+    if notChain:
+        print("PD_HT")
+    else:
+        print('not_PD_HT')
+    
+    if TSBCnt:
+        print("DoS_HT")
+    else:
+        print("not_DoS_HT")
+    
+    if notCnt or mtmPresent or fnUnit:
+        print("Ft")
+    else:
+        print('No FT')
+    
+    if counterCnt:
+        print('BE/DA')
+    else:
+        print("Not BE/DA")
